@@ -1,9 +1,10 @@
+# GoogleTest
 include(FetchContent)
+
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        v1.14.0
-)
+  GIT_TAG v1.14.0)
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt
     ON
@@ -12,8 +13,13 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-add_executable(hello_test hello_test.cpp)
-target_link_libraries(hello_test GTest::gtest_main)
+file(GLOB nt_test_src "*.cpp")
+
+add_executable(nt_test ${nt_test_src})
+target_link_libraries(nt_test GTest::gtest_main)
+target_link_libraries(nt_test NetGen)
 
 include(GoogleTest)
-gtest_discover_tests(hello_test)
+
+# Time in seconds
+gtest_discover_tests(nt_test DISCOVERY_TIMEOUT 1000 DISCOVERY_MODE PRE_TEST)
