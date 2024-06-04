@@ -15,6 +15,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <ostream>
 #include <set>
 #include <span>
 #include <stdexcept>
@@ -358,8 +359,11 @@ class GPTLanguageModel {
         return x.toTensor();
     }
 
-    nt::Tensor generate(nt::Tensor idx, size_t maxNewTokens) {
+    nt::Tensor generate(const std::string &prompt, size_t maxNewTokens,
+                        const Tokenizer &tokenizer) {
         assert(idx.getShape().dim() == 1);
+        std::cout << prompt;
+        nt::Tensor idx(tokenizer.encode(prompt));
 
         for (size_t i = 0; i < maxNewTokens; i++) {
             const auto contextShape = idx.getShape();
@@ -384,7 +388,10 @@ class GPTLanguageModel {
                 nt::functional::cpu::DiscreteDistribution::forward(probs);
             idx = nt::functional::cpu::Concat::forward({idx, idxNext},
                                                        -1); // (T+1)
+            std::cout << tokenizer.itos(static_cast<int>(idxNext.span()[0]))
+                      << std::flush;
         }
+        std::cout << '\n';
 
         return idx;
     }
@@ -442,17 +449,14 @@ int main(int argc, char *argv[]) {
         GPTLanguageModel model(vocabSize, nEmbed, blockSize, nLayer, nHead);
         model.loadWeights(dict);
 
-        const auto input = tokenizer.encode(prompt);
         nt::Clock perfClockGenerate;
         perfClockGenerate.start();
-        const int numTokensToGenerate = 50;
-        auto out = model.generate(nt::Tensor(input), numTokensToGenerate);
+        const int numTokensToGenerate = 250;
+        auto out = model.generate(prompt, numTokensToGenerate, tokenizer);
         perfClockGenerate.stop();
         auto outText = tokenizer.decode(out.toVector<int32_t>());
 
-        std::cout << outText << '\n';
-
-        std::cout << "Performance clock generate: "
+        std::cout << "\nPerformance clock: "
                   << perfClockGenerate.getDuration<std::chrono::milliseconds>()
                   << " ms" << '\n';
     } catch (const std::exception &e) {
